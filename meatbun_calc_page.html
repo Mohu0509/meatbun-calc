@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>肉まん必要数計算ツール</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f7f7f7;
+      padding: 2em;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 1.5em;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input {
+      width: 100%;
+      padding: 0.5em;
+      margin-top: 0.5em;
+      margin-bottom: 1em;
+      font-size: 1em;
+    }
+    button {
+      width: 100%;
+      padding: 0.75em;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      font-size: 1em;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 1.5em;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>肉まん必要数計算ツール</h2>
+    <label>現在のレベル:</label>
+    <input type="number" id="currentLevel" min="1" max="80" value="1">
+    <label>目標のレベル:</label>
+    <input type="number" id="targetLevel" min="1" max="80" value="2">
+    <button onclick="calculate()">計算する</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    // 合計肉まんの配列（インデックス = レベル - 1）
+    const totalMeatbuns = [
+      0, 4, 13, 33, 63, 103, 163, 233, 333, 433,
+      633, 833, 1033, 1333, 1733, 2133, 2633, 3233, 3933, 4733,
+      5633, 6733, 8033, 9433, 11033, 12933, 15033, 17433, 20133, 23133,
+      26533, 30333, 34533, 39133, 44233, 49933, 56133, 63033, 70533, 78833,
+      87333, 96533, 106533, 117533, 129533, 142533, 156533, 171533, 187533, 205533,
+      224533, 244533, 266533, 289533, 314533, 341533, 370533, 401533, 434533, 469533,
+      506533, 545533, 587533, 631533, 678533, 728533, 781533, 837533, 896533, 959533,
+      1025533, 1095533, 1168533, 1245533, 1327533, 1413533, 1503533, 1598533, 1698533, 1798533
+    ];
+
+    function calculate() {
+      const current = parseInt(document.getElementById('currentLevel').value);
+      const target = parseInt(document.getElementById('targetLevel').value);
+      const resultEl = document.getElementById('result');
+
+      if (isNaN(current) || isNaN(target) || current < 1 || target < 1 || current >= target || target > totalMeatbuns.length) {
+        resultEl.innerHTML = '<span class="error">正しいレベル範囲（1〜80）で、かつ目標レベルが現在より高くなるように入力してください。</span>';
+        return;
+      }
+
+      const need = totalMeatbuns[target - 1] - totalMeatbuns[current - 1];
+      resultEl.textContent = `必要な肉まん数は ${need.toLocaleString()} 個です。`;
+    }
+  </script>
+</body>
+</html>
