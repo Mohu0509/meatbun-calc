@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>武将パラメータweb版</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 1em;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 80vh;
+      position: relative;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1200px;
+      font-size: 0.9em;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 4px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    th {
+      background: #d9e1f2;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    th.sortable {
+      cursor: pointer;
+    }
+    th.sorted-asc::after {
+      content: " \25B2";
+    }
+    th.sorted-desc::after {
+      content: " \25BC";
+    }
+    th.level1 {
+      background: #b4c6e7;
+      cursor: default;
+    }
+    th.level1:last-child {
+      border-right: 1px solid #aaa;
+    }
+    th.level1:nth-child(1),
+    th.level1:nth-child(2),
+    th.level1:nth-child(3),
+    th.level1:nth-child(4) {
+      background: #b4c6e7;
+      border-right: 1px solid #666;
+    }
+    th.level1:nth-child(5) { background: #68d19e; border-right: 1px solid #666; }
+    th.level1:nth-child(6) { background: #fce4d6; border-right: 1px solid #666; }
+    th.level1:nth-child(7) { background: #fde9d9; border-right: 1px solid #666; }
+    th.level1:nth-child(8) { background: #f9f2ec; border-right: 1px solid #666; }
+    th.level1:nth-child(9) { background: #eaf1dd; border-right: 1px solid #666; }
+    th.level1:nth-child(10) { background: #ddebf1; border-right: 1px solid #666; }
+
+    thead tr:nth-child(2) th {
+      background: #f2f2f2;
+    }
+
+    .combo-float { background-color: #c6e0b4; }
+    .combo-knockback { background-color: #ffe699; }
+    .combo-down { background-color: #f4cccc; }
+    .combo-none { background-color: #e0e0e0; }
+    input[type="number"] {
+      width: 60px;
+    }
+    select {
+      width: 60px;
+    }
+    td.group-border {
+      border-right: 1px solid #666 !important;
+    }
+    .faction-魏 { color: #1f4e79; font-weight: bold; }
+    .faction-呉 { color: #c00000; font-weight: bold; }
+    .faction-蜀 { color: #548235; font-weight: bold; }
+    .faction-他 { color: #8919a5; font-weight: bold; }
+    .faction-群 { color: #070300; font-weight: bold; }
+
+    @media (max-width: 768px) {
+      body {
+        font-size: 0.8em;
+      }
+      input[type="number"], select {
+        width: 50px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>武将パラメータ計算シート（Web版）</h2>
+  <div class="table-wrapper">
+    <div id="table-container"></div>
+  </div>
+  <script>
+    const headersLevel1 = [
+      ['キャラクター', 7], ['合体技', 7], ['初期ｽﾃｰﾀｽ', 4], ['指定lvのｽﾃｰﾀｽ', 4],
+      ['コンボリスト', 4], ['伐採場', 3], ['食堂', 3], ['兵舎', 5], ['鍛冶屋', 3], ['主殿', 7]
+    ];
+
+    const headersLevel2 = [
+      'No','陣営','名将','武将名','所持','★','レベル','地上','五虎','龍舞','火鳳','孫劉','龍吟','富甲',
+      '武','知','耐','体','武','知','耐','体','怒','普','追元','追後','伐採','木加','木販','小麦','肉製','肉販',
+      '徴兵','基礎','筋ﾄﾚ','俊ﾄﾚ','体ﾄﾚ','採掘','溶煉','鍛冶','倉庫','建設','治安','武実','銅貨','宝探','招宴'
+    ];
+
+    const thresholdsNormal = [0, 90, 250, 430, 630, 850, 1000, 1400, 1600, 1800, 2000];
+    const thresholdsSpecial = [0, 90, 250, 430, 630, 850, 1000, 1400, 1700, 2000, 2300];
+
+    const data = [
+      ['1','蜀','○','張飛','FALSE','5','100','○','○','','','△','','','98','33','85','108','','','','','浮遊','転倒','転倒','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['2','蜀','○','関羽','FALSE','5','100','○','○','','','△','','','99','82','89','109','','','','','浮遊','転倒','浮遊','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['3','蜀','○','趙雲','FALSE','5','100','○','○','','','△','','','97','76','92','90','','','','','転倒','浮遊','浮遊','転倒','','','','','','','','','','','','','','','','','','','','',''],
+      ['4','蜀','○','劉備','FALSE','5','100','','','','','△','','','89','80','91','111','','','','','転倒','転倒','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['5','蜀','○','諸葛亮','FALSE','5','100','','','','','★','','','46','100','86','99','','','','','浮遊','浮遊','転倒','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['6','蜀','','徐庶','FALSE','5','100','','','','','△','','','64','92','69','66','','','','','なし','ＫＢ','ＫＢ','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['7','蜀','','魏延','FALSE','5','100','','','','','△','','','92','69','81','85','','','','','なし','浮遊','ＫＢ','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['8','蜀','','孟獲','FALSE','5','100','','','','','△','','','86','42','79','93','','','','','転倒','転倒','ＫＢ','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['9','蜀','○','馬超','FALSE','5','100','○','○','','','△','','','108','44','95','111','','','','','ＫＢ','浮遊','ＫＢ','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['10','蜀','○','黄忠','FALSE','5','100','○','○','','','△','','','96','63','87','108','','','','','ＫＢ','ＫＢ','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['11','蜀','○','龐統','FALSE','5','100','','','','○','△','','','64','99','87','93','','','','','なし','転倒','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['12','魏','○','曹操','FALSE','5','100','','','','','','○','','85','94','92','93','','','','','転倒','転倒','転倒','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['13','魏','○','夏侯惇','FALSE','5','100','','','','','','○','','90','65','90','111','','','','','ＫＢ','浮遊','転倒','転倒','','','','','','','','','','','','','','','','','','','','',''],
+      ['14','魏','○','郭嘉','FALSE','5','100','','','','','','○','','35','99','91','89','','','','','浮遊','浮遊','浮遊','転倒','','','','','','','','','','','','','','','','','','','','',''],
+      ['15','魏','○','夏侯淵','FALSE','5','100','○','','','','','','','95','68','88','108','','','','','ＫＢ','ＫＢ','ＫＢ','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['16','魏','○','許褚','FALSE','3','100','○','','','','','','','96','36','85','110','','','','','ＫＢ','転倒','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['17','魏','','張郃','FALSE','5','100','','','','','','','','89','73','84','87','','','','','なし','ＫＢ','ＫＢ','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['18','魏','','于禁','FALSE','5','100','','','','','','','','87','72','85','86','','','','','浮遊','浮遊','転倒','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['19','魏','','徐晃','FALSE','5','100','','','','','','','','90','64','86','82','','','','','浮遊','転倒','転倒','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['20','魏','○','典韋','FALSE','5','100','○','','','','','○','','98','53','85','115','','','','','ＫＢ','転倒','ＫＢ','転倒','','','','','','','','','','','','','','','','','','','','',''],
+      ['21','魏','○','張梁','FALSE','5','100','○','','','','','○','','97','82','92','90','','','','','浮遊','転倒','浮遊','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['22','魏','○','荀彧','FALSE','5','100','','','','','','○','','45','97','88','94','','','','','転倒','転倒','浮遊','転倒','','','','','','','','','','','','','','','','','','','','',''],
+      ['23','呉','○','孫策','FALSE','5','100','○','','','○','△','','△','93','69','92','105','','','','','なし','浮遊','ＫＢ','転倒','','','','','','','','','','','','','','','','','','','','',''],
+      ['24','呉','○','周瑜','FALSE','5','100','','','','○','△','','△','78','98','91','90','','','','','なし','浮遊','浮遊','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['25','呉','○','太史慈','FALSE','5','100','○','','','','△','','△','94','64','87','110','','','','','転倒','ＫＢ','浮遊','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['26','呉','○','孫堅','FALSE','5','100','○','','','','△','','△','91','74','90','110','','','','','転倒','転倒','転倒','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['27','呉','○','大橋','FALSE','5','100','','','','○','△','','△','57','92','89','92','','','','','なし','浮遊','浮遊','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['28','呉','○','小橋','FALSE','5','100','','','','○','△','','△','64','89','91','93','','','','','なし','ＫＢ','浮遊','転倒','','','','','','','','','','','','','','','','','','','','',''],
+      ['29','呉','','黄蓋','FALSE','5','100','','','','○','△','','△','83','70','80','95','','','','','浮遊','転倒','転倒','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['30','呉','','淩統','FALSE','5','100','','','','','△','','△','89','58','82','87','','','','','浮遊','浮遊','ＫＢ','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['31','呉','','魯粛','FALSE','5','100','','','','','△','','△','56','91','66','70','','','','','ＫＢ','ＫＢ','浮遊','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['32','呉','○','周泰','FALSE','5','100','','','','○','△','','△','90','47','98','109','','','','','なし','ＫＢ','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['33','呉','○','甘寧','FALSE','5','100','○','','','○','△','','△','96','76','87','108','','','','','転倒','転倒','転倒','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['34','呉','○','孫権','FALSE','5','100','','','','','△','','★','79','93','87','99','','','','','転倒','ＫＢ','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['35','群','○','呂布','FALSE','5','100','○','','○','','','','△','100','26','92','93','','','','','浮遊','浮遊','浮遊','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['36','群','○','張角','FALSE','5','100','','','','','','','△','35','95','88','96','','','','','なし','浮遊','浮遊','転倒','','','','','','','','','','','','','','','','','','','','',''],
+      ['37','群','○','董卓','FALSE','5','100','','','','','','','△','85','65','88','120','','','','','浮遊','転倒','転倒','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['38','群','○','袁紹','FALSE','5','100','','','','','','','△','85','79','94','114','','','','','浮遊','転倒','転倒','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['39','群','○','貂蝉','FALSE','5','100','','','○','','','','△','46','91','88','94','','','','','転倒','転倒','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['40','群','','顔良','FALSE','5','100','','','','','','','△','88','40','88','82','','','','','ＫＢ','浮遊','浮遊','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['41','群','','文醜','FALSE','5','100','','','','','','','△','89','25','83','86','','','','','浮遊','浮遊','ＫＢ','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['42','群','','司馬徽','FALSE','5','100','','','','','','','△','20','91','63','72','','','','','ＫＢ','ＫＢ','浮遊','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['43','群','○','賈詡','FALSE','5','100','','','','','','','△','46','98','89','92','','','','','浮遊','ＫＢ','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['44','群','○','高順','FALSE','5','100','','','','','','','△','92','63','91','108','','','','','浮遊','ＫＢ','ＫＢ','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['45','群','○','華佗','FALSE','5','100','','','','','','','△','34','92','86','95','','','','','なし','転倒','ｶｳﾝﾀｰ','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['46','群','○','陳宮','FALSE','5','100','','','','','','','△','42','96','82','95','','','','','ＫＢ','ＫＢ','浮遊','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['47','他','○','源義経','FALSE','5','100','○','','','','○','','○','94','63','91','109','','','','','浮遊','転倒','転倒','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['48','他','○','悟空','FALSE','5','100','','○','','','○','','○','98','65','91','111','','','','','転倒','浮遊','転倒','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['49','他','○','ロリキラー','FALSE','5','100','','','','','○','','○','97','73','89','108','','','','','浮遊','ＫＢ','ＫＢ','転倒','','','','','','','','','','','','','','','','','','','','',''],
+      ['50','他','○','パラディン','FALSE','5','100','','','','','','○','','98','63','92','117','','','','','ＫＢ','転倒','ＫＢ','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['51','他','○','織田信長','FALSE','5','100','○','','','','○','','○','97','78','90','110','','','','','ＫＢ','ＫＢ','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['52','他','○','真田幸村','FALSE','5','100','○','','','','○','','○','96','65','89','109','','','','','浮遊','浮遊','浮遊','ＫＢ','','','','','','','','','','','','','','','','','','','','',''],
+      ['53','他','○','坂本龍馬','FALSE','5','100','○','','','','○','','○','95','68','90','109','','','','','なし','転倒','ＫＢ','浮遊','','','','','','','','','','','','','','','','','','','','',''],
+      ['54','他','','チンピラ','FALSE','5','100','','','','','○','','○','88','40','88','98','','','','','転倒','転倒','ＫＢ','なし','','','','','','','','','','','','','','','','','','','','',''],
+      ['55','他','','お巡り','FALSE','5','100','','','','','○','','○','89','25','83','103','','','','','なし','転倒','転倒','なし','','','','','','','','','','','','','','','','','','','','','']
+    ]; // 必要なデータ配列をここに展開
+
+    let sortConfig = { index: null, asc: true };
+
+        function calculateStatus(base, star, level) {
+      if (isNaN(base) || isNaN(star) || isNaN(level)) return '';
+      const a = base, b = 0.1 * (level - 1);
+      const c = 0.5 * Math.floor(level / 10);
+      const d = (level === 100 && star < 5) ? -0.5 : 0;
+      const bonus = (c + d);
+      return Math.floor((a + a * b + a * bonus) * (1 + star * 0.15));
+    }
+
+    function getRank(value, thresholds) {
+      if (isNaN(value)) return '';
+      for (let i = 0; i < thresholds.length; i++) {
+        if (value < thresholds[i]) return i ;
+      }
+      return thresholds.length;
+    }
+
+    function applyGroupBorder(td, colIndex) {
+      const borderCols = [6, 13, 17, 21,25,28,31,36,39,46]; // 大分類の終端列インデックス
+      if (borderCols.includes(colIndex)) {
+        td.classList.add("group-border");
+      }
+    }
+
+        // 入力値を保存
+    function saveInputsToLocalStorage() {
+      const inputs = Array.from(document.querySelectorAll('input, select')).map(el => ({
+        id: el.id,
+        value: el.type === 'checkbox' ? el.checked : el.value
+      }));
+      localStorage.setItem('busho-inputs', JSON.stringify(inputs));
+    }
+
+    // 保存された値で復元
+    function loadInputsFromLocalStorage() {
+      const saved = JSON.parse(localStorage.getItem('busho-inputs') || '[]');
+      saved.forEach(({ id, value }) => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (el.type === 'checkbox') el.checked = value;
+          else el.value = value;
+          el.dispatchEvent(new Event('input'));
+        }
+      });
+    }
+
+    // 入力が変更されたら保存
+    window.addEventListener('change', e => {
+      if (e.target.matches('input, select')) {
+        saveInputsToLocalStorage();
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', loadInputsFromLocalStorage);
+
+    function createTable() {
+      const container = document.getElementById("table-container");
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+
+      const row1 = document.createElement("tr");
+      headersLevel1.forEach(([label, span]) => {
+        const th = document.createElement("th");
+        th.className = "level1";
+        th.colSpan = span;
+        th.textContent = label;
+        row1.appendChild(th);
+      });
+      thead.appendChild(row1);
+
+      const row2 = document.createElement("tr");
+      headersLevel2.forEach((label, index) => {
+        const th = document.createElement("th");
+        const span = document.createElement("span");
+        span.textContent = label;
+        th.appendChild(span);
+        th.classList.add("sortable");
+        if (sortConfig.index === index) {
+          th.classList.add(sortConfig.asc ? "sorted-asc" : "sorted-desc");
+        }
+        th.addEventListener("click", () => sortData(index));
+        row2.appendChild(th);
+      });
+      thead.appendChild(row2);
+
+      data.forEach((record, rowIndex) => {
+        const tr = document.createElement("tr");
+        record.forEach((cell, colIndex) => {
+          const td = document.createElement("td");
+          if (colIndex === 1) {
+            td.classList.add(`faction-${cell}`);
+          }
+          if (colIndex === 4) {
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = cell === 'TRUE';
+            checkbox.addEventListener('change', () => record[colIndex] = checkbox.checked ? 'TRUE' : 'FALSE');
+            td.appendChild(checkbox);
+          } else if (colIndex === 5) {
+            const select = document.createElement("select");
+            for (let i = 0; i <= 5; i++) {
+              const option = document.createElement("option");
+              option.value = i;
+              option.text = i;
+              if (cell == i) option.selected = true;
+              select.appendChild(option);
+            }
+            select.addEventListener("change", () => {
+              record[colIndex] = select.value;
+              updateTable();
+            });
+            td.appendChild(select);
+          } else if (colIndex === 6) {
+            const input = document.createElement("input");
+            input.type = "number";
+            input.min = 1;
+            input.max = 100;
+            input.value = cell;
+            input.addEventListener("input", () => {
+              record[colIndex] = input.value;
+              updateTable();
+            });
+            td.appendChild(input);
+            applyGroupBorder(td, colIndex);
+          } else if ([18, 19, 20, 21].includes(colIndex)) {
+            const baseIndex = colIndex - 4;
+            const base = parseFloat(record[baseIndex]);
+            const star = parseInt(record[5]);
+            const level = parseInt(record[6]);
+            td.textContent = calculateStatus(base, star, level);
+            applyGroupBorder(td, colIndex);
+          } else if (colIndex >= 26 && colIndex <= 46) { //XXX: ランク判定（AB〜AV）
+            //基準とする値：T列(18) 26,27,29,33,34,35,36,37,38,39,40,41,42
+            //基準とする値：U列(19) 28,30,31,32,43,44,45,46 
+            const sourceCol = (colIndex === 28 || colIndex === 30 || colIndex === 31 || colIndex === 32 || colIndex === 43|| colIndex === 44|| colIndex === 45) ? 19 : 18;
+            const base = parseFloat(record[sourceCol - 4]);
+            const star = parseInt(record[5]);
+            const level = parseInt(record[6]);
+            const status = calculateStatus(base, star, level);
+            const thresholds = (colIndex === 43 || colIndex === 45 || colIndex === 46) ? thresholdsSpecial : thresholdsNormal;
+            td.textContent = getRank(status, thresholds);
+            applyGroupBorder(td, colIndex);
+          } else {
+            td.textContent = cell;
+            applyGroupBorder(td, colIndex);
+            if ([22,23,24,25].includes(colIndex)) {
+            if (cell.includes("浮遊")) td.classList.add("combo-float");
+            else if (cell.includes("ＫＢ")) td.classList.add("combo-knockback");
+            else if (cell.includes("転倒")) td.classList.add("combo-down");
+            else if (cell === "なし") td.classList.add("combo-none");
+          }
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      container.innerHTML = "";
+      container.appendChild(table);
+    }
+
+    function sortData(index) {
+      const isAsc = sortConfig.index === index ? !sortConfig.asc : true;
+      sortConfig = { index, asc: isAsc };
+
+      data.sort((a, b) => {
+        const valA = a[index];
+        const valB = b[index];
+        const numA = parseFloat(valA);
+        const numB = parseFloat(valB);
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return isAsc ? numA - numB : numB - numA;
+        } else {
+          return isAsc ? String(valA).localeCompare(valB) : String(valB).localeCompare(valA);
+        }
+      });
+      createTable();
+    }
+
+    function updateTable() {
+      createTable();
+    }
+    createTable();
+  </script>
+</body>
+</html>
