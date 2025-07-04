@@ -97,7 +97,7 @@
   </style>
 </head>
 <body>
-  <h2>武将パラメータ計算シート（Web版）Ver0.8 </h2>
+  <h2>武将パラメータ計算シート（Web版）Ver0.8.1 </h2>
   <div class="table-wrapper">
     <div id="table-container"></div>
   </div>
@@ -200,35 +200,50 @@
       }
     }
 
-        // 入力値を保存
-    function saveInputsToLocalStorage() {
+       function saveInputsToLocalStorage() {
       const inputs = Array.from(document.querySelectorAll('input, select')).map(el => ({
         id: el.id,
         value: el.type === 'checkbox' ? el.checked : el.value
       }));
-      localStorage.setItem('busho-inputs', JSON.stringify(inputs));
+      localStorage.setItem('bushoInputs', JSON.stringify(inputs));
     }
 
-    // 保存された値で復元
     function loadInputsFromLocalStorage() {
-      const saved = JSON.parse(localStorage.getItem('busho-inputs') || '[]');
-      saved.forEach(({ id, value }) => {
+      const saved = localStorage.getItem('bushoInputs');
+      if (!saved) return;
+      const inputs = JSON.parse(saved);
+      inputs.forEach(({ id, value }) => {
         const el = document.getElementById(id);
         if (el) {
-          if (el.type === 'checkbox') el.checked = value;
-          else el.value = value;
-          el.dispatchEvent(new Event('input'));
+          if (el.type === 'checkbox') {
+            el.checked = value;
+            el.dispatchEvent(new Event('change'));
+          } else if (el.tagName === 'SELECT') {
+            el.value = value;
+            el.dispatchEvent(new Event('change'));
+          } else {
+            el.value = value;
+            el.dispatchEvent(new Event('input'));
+          }
         }
       });
     }
 
-    // 入力が変更されたら保存
+    // change イベントで checkbox と select を保存
     window.addEventListener('change', e => {
-      if (e.target.matches('input, select')) {
+      if (e.target.matches('input[type="checkbox"], select')) {
         saveInputsToLocalStorage();
       }
     });
 
+    // input イベントで数値入力を保存
+    window.addEventListener('input', e => {
+      if (e.target.matches('input[type="number"]')) {
+        saveInputsToLocalStorage();
+      }
+    });
+
+    // ページ読み込み時に保存値を復元
     window.addEventListener('DOMContentLoaded', loadInputsFromLocalStorage);
 
     function createTable() {
