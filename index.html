@@ -50,9 +50,9 @@
   <div class="container">
     <h2>肉まん必要数計算ツール</h2>
     <label>現在のレベル:</label>
-    <input type="number" id="currentLevel" min="1" max="80" value="1">
+    <input type="number" id="currentLevel" min="1" max="89" value="1">
     <label>目標のレベル:</label>
-    <input type="number" id="targetLevel" min="1" max="80" value="2">
+    <input type="number" id="targetLevel" min="2" max="90" value="90">
     <button onclick="calculate()">計算する</button>
     <div class="result" id="result"></div>
   </div>
@@ -67,8 +67,8 @@
       87333, 96533, 106533, 117533, 129533, 142533, 156533, 171533, 187533, 205533,
       224533, 244533, 266533, 289533, 314533, 341533, 370533, 401533, 434533, 469533,
       506533, 545533, 587533, 631533, 678533, 728533, 781533, 837533, 896533, 959533,
-      1025533, 1095533, 1168533, 1245533, 1327533, 1413533, 1503533, 1598533, 1698533, 1798533
-    ];
+      1025533, 1095533, 1168533, 1245533, 1327533, 1413533, 1503533, 1598533, 1698533, 1798533,
+      1908533, 2028533, 2148533, 2278533, 2408533, 2548533, 2698533, 2848533, 3008533, 3178533    ];
 
     function calculate() {
       const current = parseInt(document.getElementById('currentLevel').value);
