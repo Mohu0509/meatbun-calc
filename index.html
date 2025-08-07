@@ -50,9 +50,9 @@
   <div class="container">
     <h2>肉まん必要数計算ツール</h2>
     <label>現在のレベル:</label>
-    <input type="number" id="currentLevel" min="1" max="89" value="1">
+    <input type="number" id="currentLevel" min="1" max="99" value="1">
     <label>目標のレベル:</label>
-    <input type="number" id="targetLevel" min="2" max="90" value="90">
+    <input type="number" id="targetLevel" min="2" max="100" value="100">
     <button onclick="calculate()">計算する</button>
     <div class="result" id="result"></div>
   </div>
@@ -77,7 +77,7 @@
       const resultEl = document.getElementById('result');
 
       if (isNaN(current) || isNaN(target) || current < 1 || target < 1 || current >= target || target > totalMeatbuns.length) {
-        resultEl.innerHTML = '<span class="error">正しいレベル範囲（1〜90）で、かつ目標レベルが現在より高くなるように入力してください。</span>';
+        resultEl.innerHTML = '<span class="error">正しいレベル範囲（1〜100）で、かつ目標レベルが現在より高くなるように入力してください。</span>';
         return;
       }
 
